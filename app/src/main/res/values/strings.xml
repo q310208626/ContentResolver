@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">ContentReceiverTest</string>
+    <string name="drawer_open">抽屉打开</string>
+    <string name="drawer_close">抽屉关闭</string>
+</resources>
