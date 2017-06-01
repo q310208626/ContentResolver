@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import com.lsj.hdmi.contentreceivertest.bean.MediaItem;
 
@@ -20,6 +21,7 @@ import java.util.List;
  * Created by hdmi on 17-5-3.
  */
 public class MusicService extends Service {
+    private String TAG="MusicService";
     private IBinder binder;
     private MyAudioPlayer myAudioPlayer;
     private List<MediaItem> musicList=new ArrayList<MediaItem>();
@@ -36,6 +38,15 @@ public class MusicService extends Service {
         return binder;
     }
 
+    public void stopMusic(){
+        myAudioPlayer.stop();
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.d(TAG, "onDestroy: ---------------------------");
+        super.onDestroy();
+    }
 
     public class MyBinder extends Binder{
         public Service getService(){
