@@ -29,12 +29,12 @@ public class MediaItem implements Parcelable{
     private String musicName;
     private String artistName;
     private long duration;
+    private Bitmap albumBitmap;
 
 
 
 
     public MediaItem(Uri musicUri, Uri albumUri, String musicName, long duration, String artistName) {
-
         this.musicUri = musicUri;
         this.albumUri = albumUri;
         this.musicName = musicName;
@@ -88,14 +88,20 @@ public class MediaItem implements Parcelable{
         this.duration = duration;
     }
 
-
-
     public int getId() {
         return id;
     }
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public Bitmap getAlbumBitmap() {
+        return albumBitmap;
+    }
+
+    public void setAlbumBitmap(Bitmap albumBitmap) {
+        this.albumBitmap = albumBitmap;
     }
 
     @Override
