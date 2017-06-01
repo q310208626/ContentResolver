@@ -11,6 +11,7 @@ import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.CardView;
 import android.util.Log;
@@ -302,10 +303,17 @@ public class MainFragment extends Fragment {
     };
 
     private void bottomBarConfiguration(MediaItem mediaItem){
-        Bitmap albumBitmap=mediaItem.getAlbumBitmap();
+        Bitmap albumBitmap;
+        try {
+            albumBitmap= MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(),mediaItem.getAlbumUri());
+        } catch (IOException e) {
+            albumBitmap=null;
+        }
         if (albumBitmap!=null){
             bottomAlbumImageView.setImageBitmap(albumBitmap);
             bottomMusicNameTextView.setText(mediaItem.getMusicName());
+        }else {
+            bottomAlbumImageView.setImageBitmap(albumBitmap);
         }
         if (musicService!=null){
             if (musicService.isPlaying()){

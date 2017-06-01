@@ -21,7 +21,7 @@ import java.net.URI;
 @Table(name="mediaitem")
 public class MediaItem implements Parcelable{
 
-    private Context mContext;
+
 
     private int id;
     private Uri musicUri;
@@ -29,27 +29,20 @@ public class MediaItem implements Parcelable{
     private String musicName;
     private String artistName;
     private long duration;
-    private Bitmap albumBitmap;
 
 
 
-    public MediaItem(Context context,Uri musicUri, Uri albumUri, String musicName, long duration, String artistName) {
-        this.mContext=context;
+
+    public MediaItem(Uri musicUri, Uri albumUri, String musicName, long duration, String artistName) {
+
         this.musicUri = musicUri;
         this.albumUri = albumUri;
         this.musicName = musicName;
         this.duration=duration;
         this.artistName=artistName;
-        try {
-            albumBitmap= MediaStore.Images.Media.getBitmap(mContext.getContentResolver(),albumUri);
-        } catch (IOException e) {
-            albumBitmap=null;
-        }
     }
 
-    public Bitmap getAlbumBitmap() {
-        return albumBitmap;
-    }
+
 
     public Uri getMusicUri() {
         return musicUri;
@@ -95,17 +88,7 @@ public class MediaItem implements Parcelable{
         this.duration = duration;
     }
 
-    public void setAlbumBitmap(Bitmap albumBitmap) {
-        this.albumBitmap = albumBitmap;
-    }
 
-    public Context getmContext() {
-        return mContext;
-    }
-
-    public void setmContext(Context mContext) {
-        this.mContext = mContext;
-    }
 
     public int getId() {
         return id;
@@ -122,13 +105,12 @@ public class MediaItem implements Parcelable{
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        //dest.writeParcelable((Parcelable) mContext,flags);
         dest.writeParcelable(musicUri,flags);
         dest.writeParcelable(albumUri,flags);
         dest.writeString(musicName);
         dest.writeLong(duration);
         dest.writeString(artistName);
-        dest.writeParcelable(albumBitmap,flags);
+
     }
 
     public static final Parcelable.Creator<MediaItem> CREATOR=new Parcelable.Creator<MediaItem>(){
@@ -148,12 +130,11 @@ public class MediaItem implements Parcelable{
     }
 
     private MediaItem(Parcel in){
-        mContext=  in.readParcelable(Context.class.getClassLoader());
+
         musicUri=  in.readParcelable(Uri.class.getClassLoader());
         albumUri=  in.readParcelable(Uri.class.getClassLoader());
         musicName=in.readString();
         duration=in.readLong();
         artistName=in.readString();
-        albumBitmap=in.readParcelable(Bitmap.class.getClassLoader());
     }
 }

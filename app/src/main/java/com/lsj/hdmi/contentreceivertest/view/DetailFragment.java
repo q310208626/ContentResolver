@@ -8,11 +8,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.Bitmap;
 import android.media.MediaPlayer;
 import android.media.TimedText;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.CardView;
 import android.util.DisplayMetrics;
@@ -35,6 +37,7 @@ import com.lsj.hdmi.contentreceivertest.bean.MediaItem;
 import com.lsj.hdmi.contentreceivertest.model.MusicService;
 import com.lsj.hdmi.contentreceivertest.model.MyAudioPlayer;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 
 /**
@@ -246,7 +249,18 @@ public class DetailFragment extends Fragment {
     }
 
     private void setMusicData(MediaItem mediaItem){
-        detailImageView.setImageBitmap(currentMusic.getAlbumBitmap());
+        currentMusic=mediaItem;
+        Bitmap albumBitmap;
+        try {
+            albumBitmap= MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(),currentMusic.getAlbumUri());
+        } catch (IOException e) {
+            albumBitmap=null;
+        }
+        if (albumBitmap!=null){
+            detailImageView.setImageBitmap(albumBitmap);
+        }else {
+            detailImageView.setImageBitmap(albumBitmap);
+        }
         nameTextView.setText(currentMusic.getMusicName());
         simpleDateFormat=new SimpleDateFormat("mm:ss");
         long totalDuration=currentMusic.getDuration();
