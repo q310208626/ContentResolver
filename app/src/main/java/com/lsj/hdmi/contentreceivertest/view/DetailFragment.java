@@ -102,6 +102,7 @@ public class DetailFragment extends Fragment {
         super.onDestroyView();
     }
 
+
     private void init(View view){
         nameTextView= (TextView) view.findViewById(R.id.detail_textview_detailshow);
         durationSeekBar= (SeekBar) view.findViewById(R.id.detail_seekbar_duration);
