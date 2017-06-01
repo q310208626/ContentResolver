@@ -2,29 +2,18 @@ package com.lsj.hdmi.contentreceivertest.view;
 
 import android.app.Fragment;
 import android.app.ProgressDialog;
-import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
-import android.content.ContentResolver;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.res.Resources;
-import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.CardView;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -36,20 +25,20 @@ import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.lsj.hdmi.contentreceivertest.MediaItemAdapter;
+import com.lsj.hdmi.contentreceivertest.adapter.MediaItemAdapter;
 import com.lsj.hdmi.contentreceivertest.R;
 import com.lsj.hdmi.contentreceivertest.bean.MediaItem;
 import com.lsj.hdmi.contentreceivertest.model.MusicService;
 import com.lsj.hdmi.contentreceivertest.model.MyAudioPlayer;
 
+import org.xutils.x;
+
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -76,6 +65,8 @@ public class MainFragment extends Fragment {
 
     private RelativeLayout bottomRelativeLayout;
 
+
+
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -100,7 +91,13 @@ public class MainFragment extends Fragment {
 
         preDraw(view);
         setHasOptionsMenu(true);
+        initListener();
 
+
+
+    }
+
+    private void initListener(){
         //listView点击事件
         mediaListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -110,13 +107,13 @@ public class MainFragment extends Fragment {
                     toast = Toast.makeText(getActivity(), "", Toast.LENGTH_SHORT);
                 }
                 try {
-                        musicService.playStart(position);
+                    musicService.playStart(position);
                     bottomBarConfiguration(onclickMediaItem);
-                    } catch (IOException e) {
-                        toast.setText("音乐文件可能损坏");
-                        toast.show();
-                        e.printStackTrace();
-                    }
+                } catch (IOException e) {
+                    toast.setText("音乐文件可能损坏");
+                    toast.show();
+                    e.printStackTrace();
+                }
                 toast.setText(onclickMediaItem.getMusicName());
                 toast.show();
 
@@ -139,20 +136,19 @@ public class MainFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 if (musicList.size()>0){
-                int currentIndex=musicService.getCurrentMusicIndex();
-                MediaItem currentMusic=musicList.get(currentIndex);
-                DetailFragment detailFragment=new DetailFragment();
+                    int currentIndex=musicService.getCurrentMusicIndex();
+                    MediaItem currentMusic=musicList.get(currentIndex);
+                    DetailFragment detailFragment=new DetailFragment();
                     Boolean isPlaying=musicService.isPlaying();
-                Bundle bundle=new Bundle();
-                bundle.putParcelable("currentMusic",currentMusic);
+                    Bundle bundle=new Bundle();
+                    bundle.putParcelable("currentMusic",currentMusic);
                     bundle.putBoolean("isPlaying",isPlaying);
-                detailFragment.setArguments(bundle);
-                getActivity().getFragmentManager().beginTransaction().addToBackStack("MainFragment").replace(R.id.container,detailFragment).commit();
+                    detailFragment.setArguments(bundle);
+                    getActivity().getFragmentManager().beginTransaction().addToBackStack("MainFragment").replace(R.id.container,detailFragment).commit();
 //                getActivity().getFragmentManager().beginTransaction().add(R.id.container,detailFragment,"detail").hide(MainFragment.this).commit();
                 }
             }
         });
-
     }
 
 

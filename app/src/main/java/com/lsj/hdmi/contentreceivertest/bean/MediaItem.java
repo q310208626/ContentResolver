@@ -7,6 +7,9 @@ import android.net.Uri;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.MediaStore;
+import android.support.annotation.IdRes;
+
+import org.xutils.db.annotation.Table;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -15,15 +18,19 @@ import java.net.URI;
 /**
  * Created by hdmi on 17-5-2.
  */
+@Table(name="mediaitem")
 public class MediaItem implements Parcelable{
 
     private Context mContext;
+
+    private int id;
     private Uri musicUri;
     private Uri albumUri;
     private String musicName;
     private String artistName;
     private long duration;
     private Bitmap albumBitmap;
+
 
 
     public MediaItem(Context context,Uri musicUri, Uri albumUri, String musicName, long duration, String artistName) {
@@ -66,6 +73,46 @@ public class MediaItem implements Parcelable{
 
     public String getArtistName() {
         return artistName;
+    }
+
+    public void setMusicUri(Uri musicUri) {
+        this.musicUri = musicUri;
+    }
+
+    public void setAlbumUri(Uri albumUri) {
+        this.albumUri = albumUri;
+    }
+
+    public void setMusicName(String musicName) {
+        this.musicName = musicName;
+    }
+
+    public void setArtistName(String artistName) {
+        this.artistName = artistName;
+    }
+
+    public void setDuration(long duration) {
+        this.duration = duration;
+    }
+
+    public void setAlbumBitmap(Bitmap albumBitmap) {
+        this.albumBitmap = albumBitmap;
+    }
+
+    public Context getmContext() {
+        return mContext;
+    }
+
+    public void setmContext(Context mContext) {
+        this.mContext = mContext;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     @Override
