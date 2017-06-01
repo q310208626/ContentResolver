@@ -14,6 +14,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.widget.ListView;
 
 import com.lsj.hdmi.contentreceivertest.bean.MediaItem;
@@ -53,5 +54,24 @@ public class MainActivity extends AppCompatActivity {
         actionBarDrawerToggle.setDrawerIndicatorEnabled(true);
         drawerLayout.setDrawerListener(actionBarDrawerToggle);
         actionBarDrawerToggle.syncState();
+    }
+
+    @Override
+    public boolean moveTaskToBack(boolean nonRoot) {
+        return super.moveTaskToBack(nonRoot);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode==KeyEvent.KEYCODE_BACK){
+            Fragment fragment=getFragmentManager().findFragmentById(R.id.container);
+            if (fragment.getClass().equals(MainFragment.class)){
+                Log.d(TAG, "onKeyDown: --------------------down to back-----------");
+                moveTaskToBack(false);
+                return true;
+            }
+            Log.d(TAG, "onKeyDown: --------------------down not to back-----------");
+        }
+        return super.onKeyDown(keyCode, event);
     }
 }

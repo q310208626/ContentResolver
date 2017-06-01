@@ -3,11 +3,13 @@ package com.lsj.hdmi.contentreceivertest.view;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Resources;
 import android.database.Cursor;
@@ -22,6 +24,7 @@ import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.CardView;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -66,6 +69,8 @@ public class MainFragment extends Fragment {
 
 
     private MusicService musicService;
+    private Boolean isBindService;
+
     private Toast toast;
     private ProgressDialog progressDialog;
 
@@ -105,8 +110,8 @@ public class MainFragment extends Fragment {
                     toast = Toast.makeText(getActivity(), "", Toast.LENGTH_SHORT);
                 }
                 try {
-                    bottomBarConfiguration(onclickMediaItem);
                         musicService.playStart(position);
+                    bottomBarConfiguration(onclickMediaItem);
                     } catch (IOException e) {
                         toast.setText("音乐文件可能损坏");
                         toast.show();
@@ -137,10 +142,13 @@ public class MainFragment extends Fragment {
                 int currentIndex=musicService.getCurrentMusicIndex();
                 MediaItem currentMusic=musicList.get(currentIndex);
                 DetailFragment detailFragment=new DetailFragment();
+                    Boolean isPlaying=musicService.isPlaying();
                 Bundle bundle=new Bundle();
                 bundle.putParcelable("currentMusic",currentMusic);
+                    bundle.putBoolean("isPlaying",isPlaying);
                 detailFragment.setArguments(bundle);
-                getActivity().getFragmentManager().beginTransaction().addToBackStack("").replace(R.id.container,detailFragment).commit();
+                getActivity().getFragmentManager().beginTransaction().addToBackStack("MainFragment").replace(R.id.container,detailFragment).commit();
+//                getActivity().getFragmentManager().beginTransaction().add(R.id.container,detailFragment,"detail").hide(MainFragment.this).commit();
                 }
             }
         });
@@ -151,18 +159,64 @@ public class MainFragment extends Fragment {
     @Override
     public void onAttach(Context context) {
         //绑定service
-        Log.d(TAG, "onAttach: ------------------");
+        Log.d(TAG, "onAttach: ----------------registService---------");
         Intent musicServiceIntent=new Intent(context,MusicService.class);
         getActivity().startService(musicServiceIntent);
-        getActivity().bindService(musicServiceIntent,sc,context.BIND_AUTO_CREATE);
+        isBindService=getActivity().bindService(musicServiceIntent,sc,context.BIND_ADJUST_WITH_ACTIVITY);
+
+        IntentFilter intentFilter=new IntentFilter();
+        intentFilter.addAction(MyAudioPlayer.ACTION_CHANGE_MUSIC);
+        getActivity().registerReceiver(mainBroadCastRrceiver,intentFilter);
         progressDialog=new ProgressDialog(context);
         super.onAttach(context);
     }
 
     @Override
+    public void onStart() {
+        if(musicService!=null){
+            Log.d(TAG, "onStart: -------------------------musicService exists");
+            MediaItem currentMediaItem=musicService.getCurrentMediaItem();
+            bottomBarConfiguration(currentMediaItem);
+        }else {
+            Log.d(TAG, "onStart: -----------------------musicService is null----------");
+        }
+        super.onStart();
+    }
+
+    @Override
+    public void onResume() {
+        if(musicService!=null){
+            Log.d(TAG, "onResume: -------------------------musicService exists");
+            MediaItem currentMediaItem=musicService.getCurrentMediaItem();
+            bottomBarConfiguration(currentMediaItem);
+        }else {
+            Log.d(TAG, "onResume: -----------------------musicService is null----------");
+        }
+        super.onResume();
+
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        Log.d(TAG, "onHiddenChanged: ------------------------"+hidden);
+        super.onHiddenChanged(hidden);
+    }
+
+    @Override
     public void onDestroyView() {
-       // getActivity().unbindService(sc);
+        Log.d(TAG, "onDestroyView: -------------------unbindService");
+        if (isBindService){
+            getActivity().unbindService(sc);
+            isBindService=false;
+        }
         super.onDestroyView();
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.d(TAG, "onDestroy: ----------------unregisterRecevicer---------");
+        getActivity().unregisterReceiver(mainBroadCastRrceiver);
+        super.onDestroy();
     }
 
     @Override
@@ -176,17 +230,14 @@ public class MainFragment extends Fragment {
         int id=item.getItemId();
         switch (id){
             case R.id.search_music:
-                Log.d(TAG, "onOptionsItemSelected: ------------query");
                 musicService.queryMusic(new MusicService.QueryMusicInterface() {
                     @Override
                     public void beforeQuery() {
-                        Log.d(TAG, "beforeQuery: ------------------");
                         showProgressDialog();
                     }
 
                     @Override
                     public void afterQuery() {
-                        Log.d(TAG, "afterQuery: -----------------------");
                         musicList.clear();
                         musicList.addAll(musicService.getMusicList());
                         mediaItemAdapter.notifyDataSetChanged();
@@ -199,6 +250,8 @@ public class MainFragment extends Fragment {
         }
         return super.onOptionsItemSelected(item);
     }
+
+
 
     public void setBottomControlImageButton(){
 
@@ -261,22 +314,24 @@ public class MainFragment extends Fragment {
             bottomAlbumImageView.setImageBitmap(albumBitmap);
             bottomMusicNameTextView.setText(mediaItem.getMusicName());
         }
+        if (musicService!=null){
+            if (musicService.isPlaying()){
+                bottomControlImageButton.setBackgroundResource(R.drawable.mediastart);
+            }else {
+                bottomControlImageButton.setBackgroundResource(R.drawable.mediastop);
+            }
+        }
     }
 
     public void showProgressDialog(){
         progressDialog.setMessage("音乐扫描中");
         progressDialog.setTitle("扫描");
+        progressDialog.setCancelable(false);
         progressDialog.show();
     }
 
     public void dismisProgressDialog(){
         progressDialog.dismiss();
-    }
-
-    @Override
-    public void onDestroy() {
-        getActivity().unbindService(sc);
-        super.onDestroy();
     }
 
 //    Handler handler=new Handler(){
@@ -292,5 +347,19 @@ public class MainFragment extends Fragment {
 //
 //        }
 //    };
+
+
+
+
+    public BroadcastReceiver mainBroadCastRrceiver=new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action=intent.getAction();
+            if (action.equals(MyAudioPlayer.ACTION_CHANGE_MUSIC)){
+                MediaItem currentMediaItem=musicService.getCurrentMediaItem();
+                bottomBarConfiguration(currentMediaItem);
+            }
+        }
+    };
 
 }

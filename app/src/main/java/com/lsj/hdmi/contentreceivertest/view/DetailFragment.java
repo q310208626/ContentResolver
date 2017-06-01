@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.media.MediaPlayer;
 import android.media.TimedText;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
@@ -66,8 +67,14 @@ public class DetailFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view=inflater.inflate(R.layout.detail_fragment,null);
         currentMusic=getArguments().getParcelable("currentMusic");
+        boolean isPlaying=getArguments().getBoolean("isPlaying");
         Log.d(TAG, "onCreateView: ---------------create--currentMusic-----------"+currentMusic);
         init(view);
+        if (!isPlaying){
+            playButton.setBackgroundResource(R.drawable.mediastop);
+        }else {
+            playButton.setBackgroundResource(R.drawable.mediastart);
+        }
         return view;
     }
 
@@ -80,11 +87,11 @@ public class DetailFragment extends Fragment {
 
         IntentFilter musicChangeIntentFilter = new IntentFilter();
         musicChangeIntentFilter.addAction(MyAudioPlayer.ACTION_CHANGE_MUSIC); //为BroadcastReceiver指定action，即要监听的消息名字。
-        getActivity().registerReceiver(myBroadcastReceiver,musicChangeIntentFilter); //注册监听
+        context.registerReceiver(myBroadcastReceiver,musicChangeIntentFilter); //注册监听
 
         IntentFilter durationChangeIntentFilter = new IntentFilter();
         durationChangeIntentFilter.addAction(MyAudioPlayer.ACTION_CHANGE_DURATION);
-        getActivity().registerReceiver(myBroadcastReceiver,durationChangeIntentFilter);
+        context.registerReceiver(myBroadcastReceiver,durationChangeIntentFilter);
         super.onAttach(context);
     }
 
@@ -111,10 +118,13 @@ public class DetailFragment extends Fragment {
 
         //重绘视图
         reMeasureImage(view);
-        setMusicData(currentMusic);
+
+        if (currentMusic!=null){
+            setMusicData(currentMusic);
+        }
+
         //初始化监听器
         initListener();
-
     }
 
     //初始化监听器
@@ -173,6 +183,8 @@ public class DetailFragment extends Fragment {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                musicService.seekTo(seekBar.getProgress());
+                setBottomPlayButtonImage();
+                currentDurationTextView.setText(simpleDateFormat.format(seekBar.getProgress()));
             }
         });
     }
@@ -227,6 +239,8 @@ public class DetailFragment extends Fragment {
             }else {
                 playButton.setBackgroundResource(R.drawable.mediastop);
             }
+        }else {
+            Log.d(TAG, "setBottomPlayButtonImage: ------------Service is null------------");
         }
     }
 
@@ -260,17 +274,16 @@ public class DetailFragment extends Fragment {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action=intent.getAction();
-            Log.d(TAG, "onReceive: ---------------------before-------"+action);
             if (action.equals(MyAudioPlayer.ACTION_CHANGE_MUSIC)){
                 currentMusic=musicService.getCurrentMediaItem();
                 long totalDuration=intent.getLongExtra("totalDuration",0);
                 durationSeekBar.setMax((int) totalDuration);
                 setMusicData(currentMusic);
+                setBottomPlayButtonImage();
             }
             else if(action.equals(MyAudioPlayer.ACTION_CHANGE_DURATION)){
 
                 long currentDuration=intent.getLongExtra("currentDuration",0);
-                Log.d(TAG, "onReceive: --------------------------in---------------"+currentDuration);
                 durationSeekBar.setProgress((int) currentDuration);
                 String currentDurationFormat=simpleDateFormat.format(currentDuration);
                 currentDurationTextView.setText(currentDurationFormat);

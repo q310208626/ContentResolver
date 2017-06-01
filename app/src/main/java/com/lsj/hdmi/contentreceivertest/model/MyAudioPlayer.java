@@ -33,6 +33,7 @@ public class MyAudioPlayer   {
     private MediaPlayer mediaPlayer;
     public Context mContext;
     private boolean isPlaying;
+    private boolean isComplete;
     private int currentMusicIndex;
     private List<MediaItem> musicList=new ArrayList<MediaItem>();
     private MediaItem currentMediaItem;
@@ -69,7 +70,11 @@ public class MyAudioPlayer   {
 
     public void pauseOrPlay(){
         if (mediaPlayer!=null){
-            if (isPlaying){
+            if (isComplete){
+                setMediaPlayerData(mContext,getCurrentMediaItem());
+                isComplete=false;
+            }
+            else if (isPlaying){
                 mediaPlayer.pause();
                 isPlaying=false;
             }else {
@@ -77,6 +82,7 @@ public class MyAudioPlayer   {
                 sendCurrentPosition();
                 isPlaying=true;
             }
+
         }
     }
 
@@ -112,6 +118,7 @@ public class MyAudioPlayer   {
             //单曲一次
             if (playType==SINGLE_ONCE){
                 mediaPlayer.stop();
+                isComplete=true;
                 isPlaying=false;
             }
             //单曲循环
@@ -348,6 +355,8 @@ public class MyAudioPlayer   {
     public void seekTo(int position){
         mediaPlayer.seekTo(position);
         mediaPlayer.start();
+        isPlaying=true;
+        sendCurrentPosition();
     }
 
     public int changePlayType(){
