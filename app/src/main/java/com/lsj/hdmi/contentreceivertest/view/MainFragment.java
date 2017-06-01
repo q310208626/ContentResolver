@@ -2,6 +2,7 @@ package com.lsj.hdmi.contentreceivertest.view;
 
 import android.app.Fragment;
 import android.app.ProgressDialog;
+import android.content.AsyncQueryHandler;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -9,10 +10,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
+import android.support.annotation.UiThread;
 import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -41,6 +45,13 @@ import org.xutils.x;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import rx.Observable;
+import rx.Scheduler;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 
 /**
  * Created by hdmi on 17-5-2.
@@ -115,9 +126,6 @@ public class MainFragment extends Fragment {
                     toast.show();
                     e.printStackTrace();
                 }
-                toast.setText(onclickMediaItem.getMusicName());
-                toast.show();
-
             }
         });
 
@@ -302,19 +310,36 @@ public class MainFragment extends Fragment {
         }
     };
 
-    private void bottomBarConfiguration(MediaItem mediaItem){
-        Bitmap albumBitmap;
-        try {
-            albumBitmap= MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(),mediaItem.getAlbumUri());
-        } catch (IOException e) {
-            albumBitmap=null;
-        }
-        if (albumBitmap!=null){
-            bottomAlbumImageView.setImageBitmap(albumBitmap);
-            bottomMusicNameTextView.setText(mediaItem.getMusicName());
+    private void bottomBarConfiguration(final MediaItem mediaItem){
+        Uri albumUri=mediaItem.getAlbumUri();
+        if (albumUri!=null){
+//            Observable.just(mediaItem.getAlbumUri())
+//                    .map(new Func1<Uri, Bitmap>() {
+//                        @Override
+//                        public Bitmap call(Uri uri) {
+//                            try {
+//                                return MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(),mediaItem.getAlbumUri());
+//                            } catch (IOException e) {
+//                                e.printStackTrace();
+//                                return null;
+//                            }
+//                        }
+//                    })
+//                    .subscribeOn(Schedulers.newThread())
+//                    .observeOn(AndroidSchedulers.mainThread())
+//                    .subscribe(new Action1<Bitmap>() {
+//                        @Override
+//                        public void call(Bitmap bitmap) {
+//                            bottomAlbumImageView.setImageBitmap(bitmap);
+//
+//                        }
+//                    });
+            bottomAlbumImageView.setImageBitmap(mediaItem.getAlbumBitmap());
         }else {
-            bottomAlbumImageView.setImageBitmap(albumBitmap);
+            bottomAlbumImageView.setBackgroundResource(R.mipmap.ic_launcher);
         }
+        bottomAlbumImageView.setImageBitmap(mediaItem.getAlbumBitmap());
+        bottomMusicNameTextView.setText(mediaItem.getMusicName());
         if (musicService!=null){
             if (musicService.isPlaying()){
                 bottomControlImageButton.setBackgroundResource(R.drawable.mediastart);
@@ -335,23 +360,6 @@ public class MainFragment extends Fragment {
         progressDialog.dismiss();
     }
 
-//    Handler handler=new Handler(){
-//        @Override
-//        public void handleMessage(Message msg) {
-//            switch (msg.what){
-//                case 1:
-//                    musicList.addAll((Collection<? extends MediaItem>) msg.obj) ;
-//                    mediaItemAdapter.notifyDataSetChanged();
-//                    dismisProgressDialog();
-//                    break;
-//            }
-//
-//        }
-//    };
-
-
-
-
     public BroadcastReceiver mainBroadCastRrceiver=new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -362,5 +370,7 @@ public class MainFragment extends Fragment {
             }
         }
     };
+
+
 
 }
