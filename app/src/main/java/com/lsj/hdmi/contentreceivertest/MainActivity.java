@@ -1,11 +1,13 @@
 package com.lsj.hdmi.contentreceivertest;
 
+import android.annotation.TargetApi;
 import android.app.Fragment;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.database.Cursor;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.MediaStore;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.widget.DrawerLayout;
@@ -15,7 +17,9 @@ import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import com.lsj.hdmi.contentreceivertest.bean.MediaItem;
 import com.lsj.hdmi.contentreceivertest.view.MainFragment;
@@ -29,6 +33,9 @@ public class MainActivity extends AppCompatActivity {
     private Fragment fragment;
     private Toolbar toolbar;
     private DrawerLayout drawerLayout;
+
+    //drawLayout Context
+    private TextView logOutTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,12 +55,25 @@ public class MainActivity extends AppCompatActivity {
 
     private void init(){
         drawerLayout= (DrawerLayout) findViewById(R.id.main_drawerlayout);
+        logOutTextView= (TextView) drawerLayout.findViewById(R.id.logout_layout);
         toolbar= (Toolbar) findViewById(R.id.main_toolbar);
         this.setSupportActionBar(toolbar);
         ActionBarDrawerToggle actionBarDrawerToggle=new ActionBarDrawerToggle(this,drawerLayout,toolbar,R.string.drawer_open,R.string.drawer_close);
         actionBarDrawerToggle.setDrawerIndicatorEnabled(true);
         drawerLayout.setDrawerListener(actionBarDrawerToggle);
         actionBarDrawerToggle.syncState();
+        initDrawListener();
+    }
+
+
+    private void initDrawListener(){
+        logOutTextView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClick: ------------------------");
+                MainActivity.this.finish();
+            }
+        });
     }
 
     @Override
