@@ -5,6 +5,7 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.TimedText;
@@ -21,6 +22,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
+import rx.Observable;
+import rx.functions.Action1;
+import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 
 /**
  * Created by hdmi on 17-5-3.
@@ -63,6 +69,8 @@ public class MyAudioPlayer   {
     //停止播放
     public  void stop(){
         if (mediaPlayer!=null){
+
+            mediaPlayer.stop();
             mediaPlayer.release();
             mediaPlayer=null;
             isPlaying=false;
@@ -231,6 +239,7 @@ public class MyAudioPlayer   {
                 e.printStackTrace();
                 isPlaying=false;
                 mediaPlayer.release();
+                mediaPlayer=new MediaPlayer();
             }
 
         }
@@ -270,9 +279,9 @@ public class MyAudioPlayer   {
                     String name = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
                     long duration = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION));
                     int albumId = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ID));
-//            Uri albumUri = ContentUris.withAppendedId(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI, albumId);
+//               Uri albumUri = ContentUris.withAppendedId(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI, albumId);
                     Uri albumUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), albumId);
-                    MediaItem mediaItem=new MediaItem(mContext,musicUri,albumUri,name,duration,artist);
+                    MediaItem mediaItem=new MediaItem(musicUri,albumUri,name,duration,artist);
                     Log.d(TAG, "run: --------query------"+name);
                     musicList.add(mediaItem);
                 }
@@ -280,8 +289,36 @@ public class MyAudioPlayer   {
                 Message msg=new Message();
                 msg.what=AFTER_QUERY;
                 handler.sendMessage(msg);
+
+                //新线程查找专辑图片
+                Observable.from(musicList)
+                        .flatMap(new Func1<MediaItem, Observable<MediaItem>>() {
+                            @Override
+                            public Observable<MediaItem> call(MediaItem mediaItem) {
+                                Bitmap bitmap=null;
+                                try {
+                                    bitmap=MediaStore.Images.Media.getBitmap(mContext.getContentResolver(),mediaItem.getAlbumUri());
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                                mediaItem.setAlbumBitmap(bitmap);
+                                return Observable.just(mediaItem);
+                            }
+                        })
+                        .subscribeOn(Schedulers.newThread())
+                        .observeOn(Schedulers.newThread())
+                        .subscribe(new Action1<MediaItem>() {
+                            @Override
+                            public void call(MediaItem mediaItem) {
+                                Message msg=new Message();
+                                msg.what=AFTER_QUERY;
+                                handler.sendMessage(msg);
+                            }
+                        });
             }
         }).start();
+
+
 
     }
 
@@ -326,10 +363,16 @@ public class MyAudioPlayer   {
             public void run() {
                 while (isPlaying){
                     Log.d(TAG, "run: -----------------send-------------currentDuration"+Thread.currentThread().getName());
-                    long currentDuration=mediaPlayer.getCurrentPosition();
-                    Intent intent=new Intent(ACTION_CHANGE_DURATION);
-                    intent.putExtra("currentDuration",currentDuration);
-                    mContext.sendBroadcast(intent);
+                    long currentDuration;
+                    try{
+                        currentDuration=mediaPlayer.getCurrentPosition();
+                        Intent intent=new Intent(ACTION_CHANGE_DURATION);
+                        intent.putExtra("currentDuration",currentDuration);
+                        mContext.sendBroadcast(intent);
+                    }catch (IllegalStateException e){
+                        Log.d(TAG, "run: ------------------------illgalException");
+                    }
+
                     try {
                         Thread.currentThread().sleep(1000);
                     } catch (InterruptedException e) {
