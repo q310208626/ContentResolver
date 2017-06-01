@@ -27,28 +27,30 @@ import java.util.Random;
  */
 public class MyAudioPlayer   {
     public static String TAG="MyAudiaPlayer";
-    public static String ACTION_CHANGE_MUSIC="com.lsj.contentreceivertest.myaudioplayer.musicchange";
-    public static String ACTION_CHANGE_DURATION="com.lsj.contentreceivertest.myaudioplayer.durationchange";
+    //广播信息
+    public static String ACTION_CHANGE_MUSIC="com.lsj.contentreceivertest.myaudioplayer.musicchange";   //音乐切换广播
+    public static String ACTION_CHANGE_DURATION="com.lsj.contentreceivertest.myaudioplayer.durationchange"; //当前音乐播放的时间广播
 
     private MediaPlayer mediaPlayer;
     public Context mContext;
-    private boolean isPlaying;
-    private boolean isComplete;
-    private int currentMusicIndex;
+    private boolean isPlaying;      //播放器状态
+    private boolean isComplete;     //播放是否完毕
+    private int currentMusicIndex;  //目前播放音乐的序号
     private List<MediaItem> musicList=new ArrayList<MediaItem>();
-    private MediaItem currentMediaItem;
+    private MediaItem currentMediaItem;     //目前播放的音乐
 
 
+    //查询本地音乐参数
     public static int BEFORE_QUERY=0;
     public static int AFTER_QUERY=1;
 
     //播放选项
     public int playType=SINGLE_ONCE;
     public int currentPlayTypeIndex=0;
-    public static int SINGLE_ONCE=100;
-    public static int SINGLE_CIRCLE=101;
-    public static int SINGLE_NEXT=110;
-    public static int RANDOM_NEXT=111;
+    public static int SINGLE_ONCE=100;      //单曲一次
+    public static int SINGLE_CIRCLE=101;    //单曲循环
+    public static int SINGLE_NEXT=110;      //单曲下一曲
+    public static int RANDOM_NEXT=111;      //随机下一曲
     public int[] playTypes=new int[]{SINGLE_ONCE,SINGLE_CIRCLE,SINGLE_NEXT,RANDOM_NEXT};
 
     public MyAudioPlayer(Context mContext) {
@@ -58,16 +60,16 @@ public class MyAudioPlayer   {
         playType=SINGLE_ONCE;
     }
 
+    //停止播放
     public  void stop(){
-        Log.d(TAG, "stop: -------------------mediaIsNull");
         if (mediaPlayer!=null){
             mediaPlayer.release();
             mediaPlayer=null;
             isPlaying=false;
-            Log.d(TAG, "stop: -------------------");
         }
     }
 
+    //暂停或者开始,由isPlaying做判断
     public void pauseOrPlay(){
         if (mediaPlayer!=null){
             if (isComplete){
@@ -86,17 +88,12 @@ public class MyAudioPlayer   {
         }
     }
 
-
+    //播放音乐
     public void play(int position) throws IOException{//跑出Exception给上层图形界面处理，文件可能损坏
         stop();
         if (mediaPlayer==null){
-           // mediaPlayer.create(mContext,uri);  //创建时为空？？
             currentMediaItem =musicList.get(position);
             mediaPlayer=new MediaPlayer();
-//            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-//            mediaPlayer.setDataSource(mContext, currentMediaItem.getMusicUri());
-//            mediaPlayer.prepare();
-//            mediaPlayer.start();
             Log.d(TAG, "play: -----------------------context"+mContext);
             Log.d(TAG, "play: -----------------------uri"+ currentMediaItem.getMusicUri());
             Log.d(TAG, "play: -----------------------mediaPlayer"+mediaPlayer);
@@ -109,6 +106,7 @@ public class MyAudioPlayer   {
         isPlaying=true;
     }
 
+    //播放完毕监听器,根据播放选项自动播放下一首或者停播
     private class MyOnCompletionListener implements MediaPlayer.OnCompletionListener{
         int musicSize=musicList.size();
         MediaItem nextMediaItem;
@@ -130,13 +128,11 @@ public class MyAudioPlayer   {
             else if (playType==SINGLE_NEXT||playType==RANDOM_NEXT){
                 nextPlay();
             }
-         else {
-//                setPlayType(SINGLE_ONCE);
-            }
             sendChangeMusicBroadcast();
         }
     }
 
+    //发送音乐切换广播
     public void sendChangeMusicBroadcast(){
         Intent intent = new Intent(ACTION_CHANGE_MUSIC);
         long totalDuration=mediaPlayer.getDuration();
@@ -145,6 +141,7 @@ public class MyAudioPlayer   {
         Log.d(TAG, "sendChangeMusicBroadcast: --------------------------");
     }
 
+    //下一首
     public void nextPlay(){
         int musicSize=musicList.size();
         MediaItem nextMediaItem;
@@ -182,7 +179,7 @@ public class MyAudioPlayer   {
         sendChangeMusicBroadcast();
     }
 
-
+    //上一首
     public void backPlay(){
         int musicSize=musicList.size();
         MediaItem nextMediaItem;
@@ -219,6 +216,7 @@ public class MyAudioPlayer   {
         sendChangeMusicBroadcast();
     }
 
+    //设置播放的音乐信息
     private void setMediaPlayerData(Context context, MediaItem nextMediaItem){
         if (mediaPlayer!=null){
             mediaPlayer.stop();
@@ -343,15 +341,12 @@ public class MyAudioPlayer   {
     }
 
 
-
-//    public void setCurrentPosition(){
-//
-//    }
-
     public long getCurrentPosition(){
         return mediaPlayer.getCurrentPosition();
     }
 
+
+    //时间滑动到position
     public void seekTo(int position){
         mediaPlayer.seekTo(position);
         mediaPlayer.start();
@@ -359,6 +354,7 @@ public class MyAudioPlayer   {
         sendCurrentPosition();
     }
 
+    //改变播放的类型
     public int changePlayType(){
         currentPlayTypeIndex=(currentPlayTypeIndex+1)%playTypes.length;
         playType=playTypes[currentPlayTypeIndex];
