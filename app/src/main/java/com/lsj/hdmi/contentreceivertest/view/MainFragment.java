@@ -67,7 +67,7 @@ public class MainFragment extends Fragment {
     private CardView bottomCardView;
     private TextView bottomMusicNameTextView;
 
-
+    private  Intent musicServiceIntent;
     private MusicService musicService;
     private Boolean isBindService;
 
@@ -160,7 +160,7 @@ public class MainFragment extends Fragment {
     public void onAttach(Context context) {
         //绑定service
         Log.d(TAG, "onAttach: ----------------registService---------");
-        Intent musicServiceIntent=new Intent(context,MusicService.class);
+        musicServiceIntent=new Intent(context,MusicService.class);
         getActivity().startService(musicServiceIntent);
         isBindService=getActivity().bindService(musicServiceIntent,sc,context.BIND_ADJUST_WITH_ACTIVITY);
 
@@ -203,19 +203,16 @@ public class MainFragment extends Fragment {
     }
 
     @Override
-    public void onDestroyView() {
-        Log.d(TAG, "onDestroyView: -------------------unbindService");
-        if (isBindService){
-            getActivity().unbindService(sc);
-            isBindService=false;
-        }
-        super.onDestroyView();
-    }
-
-    @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy: ----------------unregisterRecevicer---------");
         getActivity().unregisterReceiver(mainBroadCastRrceiver);
+        if (isBindService){
+            Log.d(TAG, "onDestroy: ----------------------stopService");
+            musicService.stopMusic();
+            musicService.stopSelf();
+            getActivity().unbindService(sc);
+            isBindService=false;
+        }
         super.onDestroy();
     }
 
