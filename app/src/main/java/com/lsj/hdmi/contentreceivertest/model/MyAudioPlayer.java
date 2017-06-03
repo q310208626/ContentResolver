@@ -11,6 +11,7 @@ import android.media.MediaPlayer;
 import android.media.TimedText;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
@@ -18,12 +19,20 @@ import android.util.Log;
 
 import com.lsj.hdmi.contentreceivertest.bean.MediaItem;
 
+import org.xutils.DbManager;
+import org.xutils.ex.DbException;
+import org.xutils.x;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 import rx.Observable;
+import rx.Observer;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
@@ -45,6 +54,13 @@ public class MyAudioPlayer   {
     private List<MediaItem> musicList=new ArrayList<MediaItem>();
     private MediaItem currentMediaItem;     //目前播放的音乐
 
+    //本地数据库
+    private String localDBName="myMusicDB.db";
+    private File localDBDir=new File(Environment.getExternalStorageDirectory().getPath());
+    private int localDBVersion=1;
+    private DbManager.DaoConfig daoConfig;
+    private DbManager dbManager;
+
 
     //查询本地音乐参数
     public static int BEFORE_QUERY=0;
@@ -64,6 +80,11 @@ public class MyAudioPlayer   {
         isPlaying=false;
         currentMusicIndex=0;
         playType=SINGLE_ONCE;
+        daoConfig=new DbManager.DaoConfig()
+                .setDbName(localDBName)
+                .setDbDir(localDBDir)
+                .setDbVersion(localDBVersion)
+                .setAllowTransaction(true);
     }
 
     //停止播放
@@ -230,7 +251,8 @@ public class MyAudioPlayer   {
             mediaPlayer.stop();
             mediaPlayer.reset();
             try {
-                mediaPlayer.setDataSource(mContext,nextMediaItem.getMusicUri());
+                Uri musicUri=Uri.parse(nextMediaItem.getMusicUri());
+                mediaPlayer.setDataSource(mContext,musicUri);
                 mediaPlayer.prepare();
                 mediaPlayer.start();
                 isPlaying=true;
@@ -255,11 +277,11 @@ public class MyAudioPlayer   {
         new Thread(new Runnable() {
             @Override
             public void run() {
-               // List<MediaItem> mediaItemsList=new ArrayList<MediaItem>();
+                // List<MediaItem> mediaItemsList=new ArrayList<MediaItem>();
                 musicList.clear();
                 String where = MediaStore.Audio.Media.DATA + " like \"%music%\"";
-                String selection=MediaStore.Audio.Media.DATA;
-                String[] searchKey = new String[] {
+                String selection = MediaStore.Audio.Media.DATA;
+                String[] searchKey = new String[]{
                         MediaStore.Audio.Media._ID,
                         MediaStore.Audio.Media.TITLE,
                         MediaStore.Audio.Albums.ALBUM_ID,
@@ -267,52 +289,66 @@ public class MyAudioPlayer   {
                         MediaStore.Audio.Media.ARTIST,
                         MediaStore.Audio.Media.DURATION
                 };
-                Uri uri= MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-                ContentResolver contentResolver= null;
+                Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                ContentResolver contentResolver = null;
                 contentResolver = mContext.getContentResolver();
-                Cursor cursor=contentResolver.query(uri,searchKey,where,null,null);
-                while(cursor.moveToNext()){
-                    String path=cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
+                Cursor cursor = contentResolver.query(uri, searchKey, where, null, null);
+                dbManager=x.getDb(daoConfig);
+                Log.d(TAG, "run: --------------------dbManager-----------"+dbManager);
+                while (cursor.moveToNext()) {
+                    String path = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
                     String id = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID));
-                    String artist=cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST));
+                    String artist = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST));
                     Uri musicUri = Uri.withAppendedPath(uri, id);
                     String name = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
                     long duration = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION));
                     int albumId = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ID));
 //               Uri albumUri = ContentUris.withAppendedId(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI, albumId);
                     Uri albumUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), albumId);
-                    MediaItem mediaItem=new MediaItem(musicUri,albumUri,name,duration,artist);
-                    Log.d(TAG, "run: --------query------"+name);
+                    MediaItem mediaItem = new MediaItem(Integer.valueOf(id),musicUri.toString(), albumUri.toString(), name, artist,duration);
+                    Log.d(TAG, "run: --------query------" + name);
                     musicList.add(mediaItem);
+                    try {
+                        dbManager.save(mediaItem);
+                    } catch (DbException e) {
+                        e.printStackTrace();
+                    }
                 }
                 cursor.close();
-                Message msg=new Message();
-                msg.what=AFTER_QUERY;
+                Message msg = new Message();
+                msg.what = AFTER_QUERY;
                 handler.sendMessage(msg);
 
                 //新线程查找专辑图片
                 Observable.from(musicList)
-                        .flatMap(new Func1<MediaItem, Observable<MediaItem>>() {
+                        .map(new Func1<MediaItem, Object>() {
                             @Override
-                            public Observable<MediaItem> call(MediaItem mediaItem) {
-                                Bitmap bitmap=null;
+                            public Object call(MediaItem mediaItem) {
+                                Bitmap bitmap = null;
                                 try {
-                                    bitmap=MediaStore.Images.Media.getBitmap(mContext.getContentResolver(),mediaItem.getAlbumUri());
+                                    bitmap = MediaStore.Images.Media.getBitmap(mContext.getContentResolver(), Uri.parse(mediaItem.getAlbumUri()));
+                                    mediaItem.setAlbumBitmap(bitmap);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
-                                mediaItem.setAlbumBitmap(bitmap);
-                                return Observable.just(mediaItem);
+                                return null;
                             }
-                        })
-                        .subscribeOn(Schedulers.newThread())
-                        .observeOn(Schedulers.newThread())
-                        .subscribe(new Action1<MediaItem>() {
+                        }).subscribeOn(Schedulers.newThread())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Observer<Object>() {
                             @Override
-                            public void call(MediaItem mediaItem) {
-                                Message msg=new Message();
-                                msg.what=AFTER_QUERY;
-                                handler.sendMessage(msg);
+                            public void onCompleted() {
+                                Log.d(TAG, "onCompleted: --------------------bitmap query complete----");
+                            }
+
+                            @Override
+                            public void onError(Throwable e) {
+
+                            }
+
+                            @Override
+                            public void onNext(Object o) {
+
                             }
                         });
             }
