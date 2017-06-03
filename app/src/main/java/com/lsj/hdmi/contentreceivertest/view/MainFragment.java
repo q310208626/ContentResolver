@@ -149,9 +149,11 @@ public class MainFragment extends Fragment {
                     MediaItem currentMusic=musicList.get(currentIndex);
                     DetailFragment detailFragment=new DetailFragment();
                     Boolean isPlaying=musicService.isPlaying();
+                    long currentPosition=musicService.getCurrentPosition();
                     Bundle bundle=new Bundle();
                     bundle.putParcelable("currentMusic",currentMusic);
                     bundle.putBoolean("isPlaying",isPlaying);
+                    bundle.putLong("currentPosition",currentPosition);
                     detailFragment.setArguments(bundle);
                     getActivity().getFragmentManager().beginTransaction().addToBackStack("MainFragment").replace(R.id.container,detailFragment).commit();
 //                getActivity().getFragmentManager().beginTransaction().add(R.id.container,detailFragment,"detail").hide(MainFragment.this).commit();
@@ -311,29 +313,8 @@ public class MainFragment extends Fragment {
     };
 
     private void bottomBarConfiguration(final MediaItem mediaItem){
-        Uri albumUri=mediaItem.getAlbumUri();
+        Uri albumUri=Uri.parse(mediaItem.getAlbumUri());
         if (albumUri!=null){
-//            Observable.just(mediaItem.getAlbumUri())
-//                    .map(new Func1<Uri, Bitmap>() {
-//                        @Override
-//                        public Bitmap call(Uri uri) {
-//                            try {
-//                                return MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(),mediaItem.getAlbumUri());
-//                            } catch (IOException e) {
-//                                e.printStackTrace();
-//                                return null;
-//                            }
-//                        }
-//                    })
-//                    .subscribeOn(Schedulers.newThread())
-//                    .observeOn(AndroidSchedulers.mainThread())
-//                    .subscribe(new Action1<Bitmap>() {
-//                        @Override
-//                        public void call(Bitmap bitmap) {
-//                            bottomAlbumImageView.setImageBitmap(bitmap);
-//
-//                        }
-//                    });
             bottomAlbumImageView.setImageBitmap(mediaItem.getAlbumBitmap());
         }else {
             bottomAlbumImageView.setBackgroundResource(R.mipmap.ic_launcher);

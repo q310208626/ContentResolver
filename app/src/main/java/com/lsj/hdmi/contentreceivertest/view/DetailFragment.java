@@ -71,13 +71,17 @@ public class DetailFragment extends Fragment {
         View view=inflater.inflate(R.layout.detail_fragment,null);
         currentMusic=getArguments().getParcelable("currentMusic");
         boolean isPlaying=getArguments().getBoolean("isPlaying");
+        long currentPosition=getArguments().getLong("currentPosition");
         Log.d(TAG, "onCreateView: ---------------create--currentMusic-----------"+currentMusic);
+        Log.d(TAG, "onCreateView: -----------------create currentPosition----------"+currentPosition);
         init(view);
         if (!isPlaying){
             playButton.setBackgroundResource(R.drawable.mediastop);
         }else {
             playButton.setBackgroundResource(R.drawable.mediastart);
         }
+        durationSeekBar.setProgress((int) currentPosition);
+        currentDurationTextView.setText(simpleDateFormat.format(currentPosition));
         return view;
     }
 
@@ -251,11 +255,7 @@ public class DetailFragment extends Fragment {
     private void setMusicData(MediaItem mediaItem){
         currentMusic=mediaItem;
         Bitmap albumBitmap;
-        try {
-            albumBitmap= MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(),currentMusic.getAlbumUri());
-        } catch (IOException e) {
-            albumBitmap=null;
-        }
+        albumBitmap=mediaItem.getAlbumBitmap();
         if (albumBitmap!=null){
             detailImageView.setImageBitmap(albumBitmap);
         }else {
