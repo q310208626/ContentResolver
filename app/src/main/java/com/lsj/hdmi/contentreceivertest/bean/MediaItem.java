@@ -7,13 +7,9 @@ import android.net.Uri;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.MediaStore;
-import android.support.annotation.IdRes;
 
+import org.xutils.db.annotation.Column;
 import org.xutils.db.annotation.Table;
-
-import java.io.IOException;
-import java.io.Serializable;
-import java.net.URI;
 
 /**
  * Created by hdmi on 17-5-2.
@@ -22,71 +18,37 @@ import java.net.URI;
 public class MediaItem implements Parcelable{
 
 
-
+    @Column(name ="mediaItemId",isId = true)
     private int id;
-    private Uri musicUri;
-    private Uri albumUri;
+    @Column(name = "musicUri")
+    private String musicUri;
+    @Column(name = "albumUri")
+    private String albumUri;
+    @Column(name = "musicName")
     private String musicName;
+    @Column(name = "artistName")
     private String artistName;
+    @Column(name = "duration")
     private long duration;
+
     private Bitmap albumBitmap;
 
 
 
+    public  MediaItem() {
 
-    public MediaItem(Uri musicUri, Uri albumUri, String musicName, long duration, String artistName) {
+    }
+
+    public MediaItem(int id, String musicUri, String albumUri, String musicName, String artistName, long duration) {
+        this.id = id;
         this.musicUri = musicUri;
         this.albumUri = albumUri;
         this.musicName = musicName;
-        this.duration=duration;
-        this.artistName=artistName;
-    }
-
-
-
-    public Uri getMusicUri() {
-        return musicUri;
-    }
-
-
-    public Uri getAlbumUri() {
-        return albumUri;
-    }
-
-
-    public String getMusicName() {
-        return musicName;
-    }
-
-
-
-    public long getDuration() {
-        return duration;
-    }
-
-    public String getArtistName() {
-        return artistName;
-    }
-
-    public void setMusicUri(Uri musicUri) {
-        this.musicUri = musicUri;
-    }
-
-    public void setAlbumUri(Uri albumUri) {
-        this.albumUri = albumUri;
-    }
-
-    public void setMusicName(String musicName) {
-        this.musicName = musicName;
-    }
-
-    public void setArtistName(String artistName) {
         this.artistName = artistName;
-    }
-
-    public void setDuration(long duration) {
         this.duration = duration;
     }
+
+
 
     public int getId() {
         return id;
@@ -94,6 +56,46 @@ public class MediaItem implements Parcelable{
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public String getMusicUri() {
+        return musicUri;
+    }
+
+    public void setMusicUri(String musicUri) {
+        this.musicUri = musicUri;
+    }
+
+    public String getAlbumUri() {
+        return albumUri;
+    }
+
+    public void setAlbumUri(String albumUri) {
+        this.albumUri = albumUri;
+    }
+
+    public String getMusicName() {
+        return musicName;
+    }
+
+    public void setMusicName(String musicName) {
+        this.musicName = musicName;
+    }
+
+    public String getArtistName() {
+        return artistName;
+    }
+
+    public void setArtistName(String artistName) {
+        this.artistName = artistName;
+    }
+
+    public long getDuration() {
+        return duration;
+    }
+
+    public void setDuration(long duration) {
+        this.duration = duration;
     }
 
     public Bitmap getAlbumBitmap() {
@@ -111,8 +113,8 @@ public class MediaItem implements Parcelable{
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeParcelable(musicUri,flags);
-        dest.writeParcelable(albumUri,flags);
+        dest.writeString(musicUri);
+        dest.writeString(albumUri);
         dest.writeString(musicName);
         dest.writeLong(duration);
         dest.writeString(artistName);
@@ -131,9 +133,7 @@ public class MediaItem implements Parcelable{
         }
     };
 
-    private MediaItem() {
 
-    }
 
     private MediaItem(Parcel in){
 
