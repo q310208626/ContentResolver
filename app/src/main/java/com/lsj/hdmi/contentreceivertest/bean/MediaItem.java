@@ -18,7 +18,7 @@ import org.xutils.db.annotation.Table;
 public class MediaItem implements Parcelable{
 
 
-    @Column(name ="mediaItemId",isId = true)
+    @Column(name ="id",isId = true)
     private int id;
     @Column(name = "musicUri")
     private String musicUri;
