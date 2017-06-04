@@ -26,6 +26,7 @@ import org.xutils.x;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -85,6 +86,8 @@ public class MyAudioPlayer   {
                 .setDbDir(localDBDir)
                 .setDbVersion(localDBVersion)
                 .setAllowTransaction(true);
+
+
     }
 
     //停止播放
@@ -294,7 +297,11 @@ public class MyAudioPlayer   {
                 contentResolver = mContext.getContentResolver();
                 Cursor cursor = contentResolver.query(uri, searchKey, where, null, null);
                 dbManager=x.getDb(daoConfig);
-                Log.d(TAG, "run: --------------------dbManager-----------"+dbManager);
+                try {
+                    dbManager.dropTable(MediaItem.class);
+                } catch (DbException e) {
+                    e.printStackTrace();
+                }
                 while (cursor.moveToNext()) {
                     String path = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
                     String id = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID));
@@ -319,8 +326,13 @@ public class MyAudioPlayer   {
                 msg.what = AFTER_QUERY;
                 handler.sendMessage(msg);
 
+
                 //新线程查找专辑图片
-                Observable.from(musicList)
+                //临时变量,避免重复扫描musicList指向空
+                ArrayList<MediaItem> tempMusicList = new ArrayList<MediaItem>();
+                tempMusicList.addAll(musicList);
+
+                Observable.from(tempMusicList)
                         .map(new Func1<MediaItem, Object>() {
                             @Override
                             public Object call(MediaItem mediaItem) {
