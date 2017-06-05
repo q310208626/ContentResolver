@@ -57,7 +57,11 @@ public class MyAudioPlayer   {
     private List<MediaItem> musicList=new ArrayList<MediaItem>();
     private MediaItem currentMediaItem;     //目前播放的音乐
 
-
+    //本地数据库
+    private String localDBName="myMusicDB.db";
+    private File localDBDir=new File(Environment.getExternalStorageDirectory().getPath());
+    private int localDBVersion=1;
+    private DbManager.DaoConfig daoConfig;
     private DbManager dbManager;
 
 
@@ -80,7 +84,11 @@ public class MyAudioPlayer   {
         currentMusicIndex=0;
         playType=SINGLE_ONCE;
 
-
+        daoConfig=new DbManager.DaoConfig()
+                .setDbName(localDBName)
+                .setDbDir(localDBDir)
+                .setDbVersion(localDBVersion)
+                .setAllowTransaction(true);
 
     }
 
@@ -291,7 +299,7 @@ public class MyAudioPlayer   {
                 ContentResolver contentResolver = null;
                 contentResolver = mContext.getContentResolver();
                 Cursor cursor = contentResolver.query(uri, searchKey, where, null, null);
-                dbManager=x.getDb(MyApp.daoConfig);
+                dbManager=x.getDb(daoConfig);
                 while (cursor.moveToNext()) {
                     String path = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
                     String id = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID));
@@ -390,6 +398,65 @@ public class MyAudioPlayer   {
         }).start();
     }
 
+    public void queryMusicFromDB(final Handler handler){
+        Message msg = new Message();
+        msg.what = BEFORE_QUERY;
+        handler.sendMessage(msg);
+        dbManager=x.getDb(daoConfig);
+        //查找数据库音乐
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                musicList.clear();
+                try {
+                    musicList.addAll(dbManager.findAll(MediaItem.class));
+
+                } catch (DbException e) {
+                    e.printStackTrace();
+                }
+                Message msg = new Message();
+                msg.what = AFTER_QUERY;
+                handler.sendMessage(msg);
+
+                //更新专辑
+                List<MediaItem> tempMusicList=new ArrayList<MediaItem>();
+                tempMusicList.addAll(musicList);
+                Observable.from(tempMusicList)
+                        .map(new Func1<MediaItem, Object>() {
+                            @Override
+                            public Object call(MediaItem mediaItem) {
+                                Bitmap albumbitmap=null;
+                                try {
+                                    albumbitmap= MediaStore.Images.Media.getBitmap(mContext.getContentResolver(),Uri.parse(mediaItem.getAlbumUri()));
+                                    mediaItem.setAlbumBitmap(albumbitmap);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                                return null;
+                            }
+                        }).subscribeOn(Schedulers.newThread())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Observer<Object>() {
+                            @Override
+                            public void onCompleted() {
+                                Log.d(TAG, "onCompleted: ----------------------bitmap query complete-----");
+                            }
+
+                            @Override
+                            public void onError(Throwable e) {
+
+                            }
+
+                            @Override
+                            public void onNext(Object o) {
+
+                            }
+                        });
+            }
+
+        }).start();
+    }
+
 
 
     public int getCurrentMusicIndex() {
@@ -417,9 +484,7 @@ public class MyAudioPlayer   {
     }
 
     public void setMusicList(List<MediaItem> musicList) {
-        List<MediaItem> newList=new ArrayList<MediaItem>();
-        newList=musicList;
-        musicList.addAll(newList);
+        this.musicList.addAll(musicList);
     }
 
 
