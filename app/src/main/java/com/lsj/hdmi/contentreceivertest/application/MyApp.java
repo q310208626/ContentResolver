@@ -12,7 +12,7 @@ import java.io.File;
  * Created by hdmi on 17-6-3.
  */
 public class MyApp extends Application {
-
+//
     @Override
     public void onCreate() {
         super.onCreate();
