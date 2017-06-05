@@ -17,6 +17,7 @@ import android.os.Message;
 import android.provider.MediaStore;
 import android.util.Log;
 
+import com.lsj.hdmi.contentreceivertest.application.MyApp;
 import com.lsj.hdmi.contentreceivertest.bean.MediaItem;
 
 import org.xutils.DbManager;
@@ -32,6 +33,7 @@ import java.util.Random;
 
 import rx.Observable;
 import rx.Observer;
+import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action0;
 import rx.functions.Action1;
@@ -55,11 +57,7 @@ public class MyAudioPlayer   {
     private List<MediaItem> musicList=new ArrayList<MediaItem>();
     private MediaItem currentMediaItem;     //目前播放的音乐
 
-    //本地数据库
-    private String localDBName="myMusicDB.db";
-    private File localDBDir=new File(Environment.getExternalStorageDirectory().getPath());
-    private int localDBVersion=1;
-    private DbManager.DaoConfig daoConfig;
+
     private DbManager dbManager;
 
 
@@ -81,11 +79,7 @@ public class MyAudioPlayer   {
         isPlaying=false;
         currentMusicIndex=0;
         playType=SINGLE_ONCE;
-        daoConfig=new DbManager.DaoConfig()
-                .setDbName(localDBName)
-                .setDbDir(localDBDir)
-                .setDbVersion(localDBVersion)
-                .setAllowTransaction(true);
+
 
 
     }
@@ -274,6 +268,7 @@ public class MyAudioPlayer   {
 
     //本地查找音乐
     public void queryMusic(final Handler handler){
+        stop();
         Message msg=new Message();
         msg.what=BEFORE_QUERY;
         handler.sendMessage(msg);
@@ -296,12 +291,7 @@ public class MyAudioPlayer   {
                 ContentResolver contentResolver = null;
                 contentResolver = mContext.getContentResolver();
                 Cursor cursor = contentResolver.query(uri, searchKey, where, null, null);
-                dbManager=x.getDb(daoConfig);
-                try {
-                    dbManager.dropTable(MediaItem.class);
-                } catch (DbException e) {
-                    e.printStackTrace();
-                }
+                dbManager=x.getDb(MyApp.daoConfig);
                 while (cursor.moveToNext()) {
                     String path = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
                     String id = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID));
@@ -315,23 +305,56 @@ public class MyAudioPlayer   {
                     MediaItem mediaItem = new MediaItem(Integer.valueOf(id),musicUri.toString(), albumUri.toString(), name, artist,duration);
                     Log.d(TAG, "run: --------query------" + name);
                     musicList.add(mediaItem);
-                    try {
-                        dbManager.save(mediaItem);
-                    } catch (DbException e) {
-                        e.printStackTrace();
-                    }
                 }
                 cursor.close();
                 Message msg = new Message();
                 msg.what = AFTER_QUERY;
                 handler.sendMessage(msg);
 
-
-                //新线程查找专辑图片
                 //临时变量,避免重复扫描musicList指向空
                 ArrayList<MediaItem> tempMusicList = new ArrayList<MediaItem>();
                 tempMusicList.addAll(musicList);
 
+                //添加进数据库
+                Observable.from(tempMusicList)
+                        .map(new Func1<MediaItem, Void>() {
+                            @Override
+                            public Void call(MediaItem mediaItem) {
+                                try {
+                                    dbManager.save(mediaItem);
+                                } catch (DbException e) {
+                                    e.printStackTrace();
+                                }
+                                return null;
+                            }
+                        }).subscribeOn(Schedulers.newThread())
+                        .subscribe(new Subscriber<Void>() {
+                            @Override
+                            public void onStart() {
+                                try {
+                                    dbManager.dropTable(MediaItem.class);
+                                } catch (DbException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+
+                            @Override
+                            public void onCompleted() {
+                                Log.d(TAG, "onCompleted: -----------------save complete--");
+                            }
+
+                            @Override
+                            public void onError(Throwable e) {
+
+                            }
+
+                            @Override
+                            public void onNext(Void aVoid) {
+
+                            }
+                        });
+
+                //新线程查找专辑图片
                 Observable.from(tempMusicList)
                         .map(new Func1<MediaItem, Object>() {
                             @Override
@@ -365,10 +388,9 @@ public class MyAudioPlayer   {
                         });
             }
         }).start();
-
-
-
     }
+
+
 
     public int getCurrentMusicIndex() {
         return currentMusicIndex;
@@ -395,7 +417,9 @@ public class MyAudioPlayer   {
     }
 
     public void setMusicList(List<MediaItem> musicList) {
-        this.musicList = musicList;
+        List<MediaItem> newList=new ArrayList<MediaItem>();
+        newList=musicList;
+        musicList.addAll(newList);
     }
 
 
