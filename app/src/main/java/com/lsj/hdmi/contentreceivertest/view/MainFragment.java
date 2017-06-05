@@ -13,7 +13,9 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.annotation.UiThread;
@@ -36,10 +38,13 @@ import android.widget.Toast;
 
 import com.lsj.hdmi.contentreceivertest.adapter.MediaItemAdapter;
 import com.lsj.hdmi.contentreceivertest.R;
+import com.lsj.hdmi.contentreceivertest.application.MyApp;
 import com.lsj.hdmi.contentreceivertest.bean.MediaItem;
 import com.lsj.hdmi.contentreceivertest.model.MusicService;
 import com.lsj.hdmi.contentreceivertest.model.MyAudioPlayer;
 
+import org.xutils.DbManager;
+import org.xutils.ex.DbException;
 import org.xutils.x;
 
 import java.io.IOException;
@@ -47,6 +52,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import rx.Observable;
+import rx.Observer;
 import rx.Scheduler;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
@@ -77,6 +83,8 @@ public class MainFragment extends Fragment {
 
     private RelativeLayout bottomRelativeLayout;
 
+    private DbManager dbManager;
+
 
 
     @Nullable
@@ -86,6 +94,7 @@ public class MainFragment extends Fragment {
         init(view);
         return  view;
     }
+
 
 
     //初始化
@@ -105,7 +114,7 @@ public class MainFragment extends Fragment {
         setHasOptionsMenu(true);
         initListener();
 
-
+        queryMusicFromDB();
 
     }
 
@@ -176,31 +185,6 @@ public class MainFragment extends Fragment {
         getActivity().registerReceiver(mainBroadCastRrceiver,intentFilter);
         progressDialog=new ProgressDialog(context);
         super.onAttach(context);
-    }
-
-    @Override
-    public void onStart() {
-        if(musicService!=null){
-            Log.d(TAG, "onStart: -------------------------musicService exists");
-            MediaItem currentMediaItem=musicService.getCurrentMediaItem();
-            bottomBarConfiguration(currentMediaItem);
-        }else {
-            Log.d(TAG, "onStart: -----------------------musicService is null----------");
-        }
-        super.onStart();
-    }
-
-    @Override
-    public void onResume() {
-        if(musicService!=null){
-            Log.d(TAG, "onResume: -------------------------musicService exists");
-            MediaItem currentMediaItem=musicService.getCurrentMediaItem();
-            bottomBarConfiguration(currentMediaItem);
-        }else {
-            Log.d(TAG, "onResume: -----------------------musicService is null----------");
-        }
-        super.onResume();
-
     }
 
     @Override
@@ -304,6 +288,9 @@ public class MainFragment extends Fragment {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             musicService= (MusicService) ((MusicService.MyBinder)service).getService();
+            mediaItemAdapter.notifyDataSetChanged();
+            musicService.setMusicList(musicList);
+            Log.d(TAG, "onServiceConnected: --------------service has connect-----------"+musicService);
         }
 
         @Override
@@ -352,6 +339,62 @@ public class MainFragment extends Fragment {
         }
     };
 
+    public void queryMusicFromDB(){
 
+        dbManager=x.getDb(MyApp.daoConfig);
+        //查找数据库音乐
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                musicList.clear();
+                try {
+                    musicList.addAll(dbManager.findAll(MediaItem.class));
+
+                } catch (DbException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(musicList.size());
+                for (int i = 0; i < musicList.size(); i++) {
+                    System.out.println(musicList.get(i).getMusicName());
+                }
+
+                //更新专辑
+                List<MediaItem> tempMusicList=new ArrayList<MediaItem>();
+                tempMusicList.addAll(musicList);
+                Observable.from(tempMusicList)
+                        .map(new Func1<MediaItem, Object>() {
+                            @Override
+                            public Object call(MediaItem mediaItem) {
+                                Bitmap albumbitmap=null;
+                                try {
+                                    albumbitmap= MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(),Uri.parse(mediaItem.getAlbumUri()));
+                                    mediaItem.setAlbumBitmap(albumbitmap);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                                return null;
+                            }
+                        }).subscribeOn(Schedulers.newThread())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Observer<Object>() {
+                            @Override
+                            public void onCompleted() {
+                                Log.d(TAG, "onCompleted: ----------------------bitmap query complete-----");
+                            }
+
+                            @Override
+                            public void onError(Throwable e) {
+
+                            }
+
+                            @Override
+                            public void onNext(Object o) {
+
+                            }
+                        });
+            }
+
+        }).start();
+    }
 
 }
