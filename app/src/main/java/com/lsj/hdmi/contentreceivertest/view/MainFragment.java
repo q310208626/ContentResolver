@@ -114,8 +114,6 @@ public class MainFragment extends Fragment {
         setHasOptionsMenu(true);
         initListener();
 
-        queryMusicFromDB();
-
     }
 
     private void initListener(){
@@ -288,8 +286,20 @@ public class MainFragment extends Fragment {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             musicService= (MusicService) ((MusicService.MyBinder)service).getService();
-            mediaItemAdapter.notifyDataSetChanged();
-            musicService.setMusicList(musicList);
+            musicService.queryMusicFromDB(new MusicService.QueryMusicInterface() {
+                @Override
+                public void beforeQuery() {
+                    showProgressDialog();
+                }
+
+                @Override
+                public void afterQuery() {
+                    musicList.addAll(musicService.getMusicList());
+                    mediaItemAdapter.notifyDataSetChanged();
+                    dismisProgressDialog();
+                }
+            });
+
             Log.d(TAG, "onServiceConnected: --------------service has connect-----------"+musicService);
         }
 
@@ -339,62 +349,6 @@ public class MainFragment extends Fragment {
         }
     };
 
-    public void queryMusicFromDB(){
 
-        dbManager=x.getDb(MyApp.daoConfig);
-        //查找数据库音乐
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                musicList.clear();
-                try {
-                    musicList.addAll(dbManager.findAll(MediaItem.class));
-
-                } catch (DbException e) {
-                    e.printStackTrace();
-                }
-                System.out.println(musicList.size());
-                for (int i = 0; i < musicList.size(); i++) {
-                    System.out.println(musicList.get(i).getMusicName());
-                }
-
-                //更新专辑
-                List<MediaItem> tempMusicList=new ArrayList<MediaItem>();
-                tempMusicList.addAll(musicList);
-                Observable.from(tempMusicList)
-                        .map(new Func1<MediaItem, Object>() {
-                            @Override
-                            public Object call(MediaItem mediaItem) {
-                                Bitmap albumbitmap=null;
-                                try {
-                                    albumbitmap= MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(),Uri.parse(mediaItem.getAlbumUri()));
-                                    mediaItem.setAlbumBitmap(albumbitmap);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                                return null;
-                            }
-                        }).subscribeOn(Schedulers.newThread())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(new Observer<Object>() {
-                            @Override
-                            public void onCompleted() {
-                                Log.d(TAG, "onCompleted: ----------------------bitmap query complete-----");
-                            }
-
-                            @Override
-                            public void onError(Throwable e) {
-
-                            }
-
-                            @Override
-                            public void onNext(Object o) {
-
-                            }
-                        });
-            }
-
-        }).start();
-    }
 
 }
