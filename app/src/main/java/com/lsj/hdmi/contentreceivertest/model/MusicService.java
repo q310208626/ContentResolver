@@ -81,6 +81,18 @@ public class MusicService extends Service {
         });
     }
 
+    public void queryMusicFromDB(final QueryMusicInterface queryMusicInterface){
+        myAudioPlayer.queryMusicFromDB(new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what){
+                    case 0:queryMusicInterface.beforeQuery(); break;
+                    case 1:queryMusicInterface.afterQuery(); break;
+                }
+            }
+        });
+    }
+
 
 
     public List<MediaItem> getMusicList(){
@@ -112,13 +124,6 @@ public class MusicService extends Service {
         return myAudioPlayer.isPlaying();
     }
 
-    public interface QueryMusicInterface{
-        void beforeQuery();
-        void afterQuery();
-    }
-
-
-
     public MediaItem getCurrentMediaItem(){
         return myAudioPlayer.getCurrentMediaItem();
     }
@@ -133,5 +138,10 @@ public class MusicService extends Service {
 
     public int changPlayType(){
         return myAudioPlayer.changePlayType();
+    }
+
+    public interface QueryMusicInterface{
+        void beforeQuery();
+        void afterQuery();
     }
 }
