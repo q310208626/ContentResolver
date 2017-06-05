@@ -28,6 +28,7 @@ public class MusicService extends Service {
 
     @Override
     public void onCreate() {
+        super.onCreate();
         binder=new MyBinder();
         myAudioPlayer=new MyAudioPlayer(this);
     }
@@ -78,8 +79,9 @@ public class MusicService extends Service {
                 }
             }
         });
-
     }
+
+
 
     public List<MediaItem> getMusicList(){
         return myAudioPlayer.getMusicList();
@@ -113,8 +115,9 @@ public class MusicService extends Service {
     public interface QueryMusicInterface{
         void beforeQuery();
         void afterQuery();
-
     }
+
+
 
     public MediaItem getCurrentMediaItem(){
         return myAudioPlayer.getCurrentMediaItem();
